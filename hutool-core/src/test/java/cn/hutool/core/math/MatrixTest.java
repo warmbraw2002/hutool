@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 
 /**
  * 矩阵单元测试
@@ -74,6 +75,19 @@ public class MatrixTest {
 		c[2][1] = new BigDecimal("126.0");
 		c[2][2] = new BigDecimal("150.0");
 		Assert.assertArrayEquals(c, Matrix.mulMatrix(a, b));
+	}
+
+	@Test
+	public void mulMatrixTest1() {
+		double[][] a = new double[200][200];
+		double[][] b = new double[200][200];
+		for (int i = 0; i < a.length; i++) {
+			for (int j = 0; j < a.length; j++) {
+				a[i][j] = Math.random()*100;
+				b[i][j] = Math.random()*100;
+			}
+		}
+		System.out.println(Arrays.deepToString(Matrix.mulMatrix(a, b)));
 	}
 
 	@Test

@@ -3,6 +3,21 @@ package cn.hutool.http;
 import cn.hutool.core.util.EscapeUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.http.HTMLFilter;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 /**
  * HTML工具类
@@ -25,6 +40,21 @@ public class HtmlUtil {
 
 	public static final String RE_HTML_MARK = "(<[^<]*?>)|(<[\\s]*?/[^<]*?>)|(<[^<]*?/[\\s]*?>)";
 	public static final String RE_SCRIPT = "<[\\s]*?script[^>]*?>.*?<[\\s]*?\\/[\\s]*?script[\\s]*?>";
+
+	/**
+	 * 在HTML中注释的内容 正则
+	 */
+	public static final String COMMENT_REGEX = "(?s)<!--.+?-->";
+
+	/**
+	 * 在HTML中无效的字符 正则
+	 */
+	public static final String INVALID_REGEX = "[\\x00-\\x08\\x0b-\\x0c\\x0e-\\x1f]";
+
+	/**
+	 * HTML格式化输出默认缩进量
+	 */
+	public static final int INDENT_DEFAULT = 2;
 
 	private static final char[][] TEXT = new char[64][];
 
@@ -94,6 +124,205 @@ public class HtmlUtil {
 	 */
 	public static String removeHtmlTag(String content, String... tagNames) {
 		return removeHtmlTag(content, true, tagNames);
+	}
+
+	/**
+	 * 读取html文件转化为String
+	 * @param fileName 文件名
+	 * @return 读取后的字符串
+	 */
+	public static String readHtml(String fileName){
+
+		String str="";
+
+		File file=new File(fileName);
+
+		try {
+
+			FileInputStream in=new FileInputStream(file);
+
+			// size  为字串的长度 ，这里一次性读完
+
+			int size=in.available();
+
+			byte[] buffer=new byte[size];
+
+			in.read(buffer);
+
+			in.close();
+
+			str=new String(buffer, StandardCharsets.UTF_8);
+
+		} catch (IOException e) {
+
+			e.printStackTrace();
+
+		}
+		return str;
+	}
+
+	/**
+	 * 将字符串写入HTML文件中
+	 *
+	 * @param str 写入的字符串
+	 * @param filename 需要写入的文件名
+	 */
+	public static void writeHtml(String str,String filename){
+		try {
+			File file = new File(filename);
+
+			PrintStream ps = new PrintStream(new FileOutputStream(file));
+
+			ps.append(str);// 在已有的基础上添加字符串
+
+			ps.close();
+		} catch (FileNotFoundException e) {
+
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 将目录下的html文件转换为jsp文件
+	 *
+	 * @param file 需要转换的目录
+	 */
+	public static void change2jsp(File file) throws IOException {
+		File[] files = file.listFiles();
+		for (File a : files) {
+			if (a.isDirectory()) {
+				change2jsp(a);
+			}
+			html2jsp(a);
+		}
+	}
+
+	/**
+	 * 将html文件转换成jsp文件，并转换成utf-8字符集
+	 *
+	 * @param file 需要转换的文件
+	 */
+	public static void html2jsp(File file) throws IOException{
+		String name = file.getName();
+		//获取文件名，文件名以html结尾的进入if分支
+		if (name.endsWith(".html")) {
+			//在相同的目录下创建一个文件名相同的jsp文件
+			File tempFile = new File(file.getAbsolutePath().replace(".html", ".jsp"));
+			//copy文件  将html文件内容copy到jsp中
+			InputStreamReader isr = new InputStreamReader(new FileInputStream(file), "UTF-8");
+			FileOutputStream outFile = new FileOutputStream(tempFile);
+			OutputStreamWriter ow = new OutputStreamWriter(outFile, "UTF-8");
+			//添加utf-8字符集
+			String s = "<%@page pageEncoding=\"UTF-8\" contentType=\"text/html; charset=UTF-8\" %>\r\n";
+			ow.write(s, 0, s.length());
+			//copy内容
+			char[] buffer = new char[1024];
+			int i = 0;
+			while ((i = isr.read(buffer)) != -1) {
+				ow.write(buffer, 0, i);
+			}
+			//关闭流
+			ow.close();
+			isr.close();
+			outFile.close();
+			// 复制完成删除htnl文件
+			file.delete();
+		}
+	}
+
+	/**
+	 * 获取网页的链接
+	 * @param filename 文件名
+	 * @return 链接集合
+	 */
+	public static List<String> getLinks(String filename){
+
+		File input = new File(filename);
+
+		Document doc = null;
+		try {
+			doc = Jsoup.parse(input,"UTF-8","网址/");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		List<String>links = new ArrayList<>();
+		Elements href = doc.select("a");
+		for (Element element : href) {
+			links.add(element.attr("href"));
+		}
+		Elements iframe = doc.select("iframe");
+		for (Element element : iframe) {
+			links.add(element.attr("src"));
+		}
+		Elements link = doc.select("link");
+		for (Element element : link) {
+			links.add(element.attr("href"));
+		}
+		Elements script = doc.select("script");
+		for (Element element : script) {
+			links.add(element.attr("src"));
+		}
+		return links;
+	}
+
+	/**
+	 * 获取外部链接
+	 * @param strings 网页的全部链接
+	 * @return 符合条件的链接集合
+	 */
+	public static List<String> filterOutLinks(List<String> strings) {
+		List<String> outLinks = new ArrayList<>();
+		for (String link : strings) {
+			if (link.startsWith("http")||link.startsWith("https")){
+				outLinks.add(link);
+			}
+		}
+		return outLinks;
+	}
+
+	/**
+	 * 获取符合条件的链接
+	 * @param links 网页的全部链接
+	 * @param isOutLinks  true：是获取外链接 ；false:是获取内链接
+	 * @param patterns 链接的过滤条件，不传表示不用过滤
+	 * @return 符合条件的链接集合
+	 */
+	public static List<String> filterLinks(List<String>links, boolean isOutLinks, String... patterns){
+		List<String> result = new ArrayList<>();
+		if(isOutLinks){
+			result = filterOutLinks(links);
+		}else {
+			for (String link : links) {
+				if (!link.startsWith("http")&&!link.startsWith("https")){
+					result.add(link);
+				}
+			}
+		}
+		if(patterns!=null&&patterns.length>0){
+			Iterator<String> iterator = result.iterator();
+			while (iterator.hasNext()){
+				for (String reg : patterns) {
+					//只要是不符合传入正则表达式规则的都移除
+					if(!isPatternlink(iterator.next(),reg)){
+						iterator.remove();
+					}
+				}
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * 通过正则表达式获取匹配的Link
+	 * @param link 目标链接
+	 * @param reg  正则表达式
+	 * @return true 匹配
+	 */
+	public static boolean isPatternlink(String link,String reg){
+		Pattern pattern = Pattern.compile(reg);
+		Matcher matcher = pattern.matcher(link);
+		return matcher.matches();
 	}
 
 	/**
@@ -173,6 +402,33 @@ public class HtmlUtil {
 			content = content.replaceAll(regex, StrUtil.format("<{}>", tagName));
 		}
 		return content;
+	}
+
+	/**
+	 * 去除HTML文本中的注释内容
+	 *
+	 * @param htmlContent XML文本
+	 * @return 当传入为null时返回null
+	 * @since 5.4.5
+	 */
+	public static String cleanComment(String htmlContent) {
+		if (htmlContent == null) {
+			return null;
+		}
+		return htmlContent.replaceAll(COMMENT_REGEX, StrUtil.EMPTY);
+	}
+
+	/**
+	 * 去除HTML文本中的无效字符
+	 *
+	 * @param htmlContent XML文本
+	 * @return 当传入为null时返回null
+	 */
+	public static String cleanInvalid(String htmlContent) {
+		if (htmlContent == null) {
+			return null;
+		}
+		return htmlContent.replaceAll(INVALID_REGEX, "");
 	}
 
 	/**

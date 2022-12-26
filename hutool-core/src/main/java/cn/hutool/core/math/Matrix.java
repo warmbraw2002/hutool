@@ -1,5 +1,7 @@
 package cn.hutool.core.math;
 
+import cn.hutool.core.util.NumberUtil;
+
 import java.math.BigDecimal;
 
 public class Matrix {
@@ -13,6 +15,7 @@ public class Matrix {
         double[][] c = new double[a.length][a[0].length];
         for (int i = 0; i < a.length; i++) {
             for (int j = 0; j < a[0].length; j++) {
+				c[i][j] = NumberUtil.add(a[i][j],b[i][j]);
                 c[i][j] = a[i][j] + b[i][j];
             }
         }
@@ -63,7 +66,7 @@ public class Matrix {
                 for (int j = finalI * a.length / threadNum; j < (finalI + 1) * a.length / threadNum; j++) {
                     for (int k = 0; k < b[0].length; k++) {
                         for (int l = 0; l < a[0].length; l++) {
-                            c[j][k] = c[j][k].add(BigDecimal.valueOf(a[j][l] * b[l][k]));
+                            c[j][k] = c[j][k].add(NumberUtil.toBigDecimal(a[j][l] * b[l][k]));
                         }
                     }
                 }
@@ -113,9 +116,9 @@ public class Matrix {
         for(int i=0; i<data.length; i++) {
             for(int j=0; j<data[0].length; j++) {
                 if((i+j)%2 == 0) {
-                    newdata[i][j] = getMatrixResult(getConfactor(data, i+1, j+1)) / A;
+					newdata[i][j] = NumberUtil.div(getMatrixResult(getConfactor(data, i+1, j+1)),A);
                 }else {
-                    newdata[i][j] = -getMatrixResult(getConfactor(data, i+1, j+1)) / A;
+					newdata[i][j] = -NumberUtil.div(getMatrixResult(getConfactor(data, i+1, j+1)),A);
                 }
             }
         }
@@ -145,9 +148,9 @@ public class Matrix {
         double[] nums = new double[num];
         for(int i=0; i<data.length; i++) {
             if(i%2 == 0) {
-                nums[i] = data[0][i] * getMatrixResult(getConfactor(data, 1, i+1));
+				nums[i] = NumberUtil.mul(data[0][i],getMatrixResult(getConfactor(data, 1, i+1)));
             }else {
-                nums[i] = -data[0][i] * getMatrixResult(getConfactor(data, 1, i+1));
+				nums[i] = -NumberUtil.mul(data[0][i],getMatrixResult(getConfactor(data, 1, i+1)));
             }
         }
         for(int i=0; i<data.length; i++) {

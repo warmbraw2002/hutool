@@ -5,8 +5,16 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<packaging>jar</packaging>
+    <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.5</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
 
-	<parent>
+    <parent>
 		<groupId>cn.hutool</groupId>
 		<artifactId>hutool-parent</artifactId>
 		<version>5.8.10</version>
